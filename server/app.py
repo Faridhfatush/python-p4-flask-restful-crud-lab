@@ -21,7 +21,7 @@ class Plants(Resource):
 
     def get(self):
         plants = [plant.to_dict() for plant in Plant.query.all()]
-        return make_response(jsonify(plants), 200)
+        return make_response(plants, 200)
 
     def post(self):
         data = request.get_json()
@@ -29,7 +29,8 @@ class Plants(Resource):
         new_plant = Plant(
             name=data['name'],
             image=data['image'],
-            price=data['price'],
+            price=float(data['price']),
+            is_in_stock=data.get('is_in_stock', True)
         )
 
         db.session.add(new_plant)
@@ -44,11 +45,39 @@ api.add_resource(Plants, '/plants')
 class PlantByID(Resource):
 
     def get(self, id):
-        plant = Plant.query.filter_by(id=id).first().to_dict()
-        return make_response(jsonify(plant), 200)
+        plant = Plant.query.get_or_404(id)
+        return make_response(plant.to_dict(), 200)
+
+    def patch(self, id):
+        plant = Plant.query.get_or_404(id)
+        data = request.get_json()
+
+        if "name" in data:
+            plant.name = data["name"]
+        if "image" in data:
+            plant.image = data["image"]
+        if "price" in data:
+            plant.price = float(data["price"])
+        if "is_in_stock" in data:
+            plant.is_in_stock = data["is_in_stock"]
+
+        db.session.commit()
+        return make_response(plant.to_dict(), 200)
+
+    def delete(self, id):
+        plant = Plant.query.get_or_404(id)
+        db.session.delete(plant)
+        db.session.commit()
+        return make_response("", 204)
 
 
 api.add_resource(PlantByID, '/plants/<int:id>')
+
+
+
+@app.route('/')
+def index():
+    return "<h1>🌱 Plant API is running!</h1>"
 
 
 if __name__ == '__main__':
